@@ -53,7 +53,7 @@ class Packet():
     self.readCount = 0
     cmd = self.duchar()
     if cmd != self.cmd:
-      raise RuntimeError("Invalid data for this packet {} <> {}".format(cmd, self.cmd))
+      raise RuntimeError(f"Invalid data for this packet {cmd} <> {self.cmd}")
 
     self.decodeChild()
 
@@ -103,7 +103,8 @@ class Packet():
   def rpb(self, num):
     ''' Returns the given number of characters from the receive buffer '''
     if num > len(self.buf):
-      raise EOFError("Trying to read {} bytes, but only {} left in buffer".format(num, len(self.buf)))
+      raise EOFError(
+          f"Trying to read {num} bytes, but only {len(self.buf)} left in buffer")
     self.readCount += num
     ret = self.buf[:num]
     self.buf = self.buf[num:]
@@ -153,47 +154,47 @@ class Packet():
   def euchar(self, val):
     ''' Add an unsigned char (byte) to the packet '''
     if not isinstance(val, int):
-      raise TypeError("Expected int, got {}".format(type(val)))
+      raise TypeError(f"Expected int, got {type(val)}")
     if val < 0 or val > 255:
-      raise ValueError("Byte {} out of range".format(val))
+      raise ValueError(f"Byte {val} out of range")
     self.buf += struct.pack('B', val)
 
   def eschar(self, val):
     ''' Add a signed char (byte) to the packet '''
     if not isinstance(val, int):
-      raise TypeError("Expected int, got {}".format(type(val)))
+      raise TypeError(f"Expected int, got {type(val)}")
     if val < -128 or val > 127:
-      raise ValueError("Byte {} out of range".format(val))
+      raise ValueError(f"Byte {val} out of range")
     self.buf += struct.pack('b', val)
 
   def eushort(self, val):
     ''' Adds an unsigned short to the packet '''
     if not isinstance(val, int):
-      raise TypeError("Expected int, got {}".format(type(val)))
+      raise TypeError(f"Expected int, got {type(val)}")
     if val < 0 or val > 0xffff:
-      raise ValueError("UShort {} out of range".format(val))
+      raise ValueError(f"UShort {val} out of range")
     self.buf += struct.pack('>H', val)
 
   def euint(self, val):
     ''' Adds and unsigned int to the packet '''
     if not isinstance(val, int):
-      raise TypeError("Expected int, got {}".format(type(val)))
+      raise TypeError(f"Expected int, got {type(val)}")
     if val < 0 or val > 0xffffffff:
-      raise ValueError("UInt {} out of range".format(val))
+      raise ValueError(f"UInt {val} out of range")
     self.buf += struct.pack('>I', val)
 
   def estring(self, val, length, unicode=False):
     ''' Adds a string to the packet '''
     if not isinstance(val, str):
-      raise TypeError("Expected str, got {}".format(type(val)))
+      raise TypeError(f"Expected str, got {type(val)}")
     if len(val) > length:
-      raise ValueError('String "{}" too long'.format(val))
+      raise ValueError(f'String "{val}" too long')
     self.buf += self.fixStr(val, length, unicode)
 
   def eip(self, val):
     ''' Adds an ip to the packet '''
     if not isinstance(val, str):
-      raise TypeError("Expected str, got {}".format(type(val)))
+      raise TypeError(f"Expected str, got {type(val)}")
     self.buf += ipaddress.ip_address(val).packed
 
   # Utility methods ----------------------------------------------------------
@@ -204,7 +205,7 @@ class Packet():
     ##TODO: Better handling on unicode
     enc = string.encode('ascii')
     ret = b''
-    for i in range(0,length):
+    for i in range(length):
       if unicode:
         ret += b'\x00'
       try:
@@ -387,27 +388,15 @@ class ObjectInfoPacket(Packet):
     self.length = self.dushort()
     self.serial = self.duint()
     self.graphic = self.dushort()
-    if self.serial & 0x80000000:
-      self.count = self.dushort()
-    else:
-      self.count = None
+    self.count = self.dushort() if self.serial & 0x80000000 else None
     if self.graphic & 0x8000:
       self.graphic += self.duchar()
     x = self.dushort()
     y = self.dushort()
-    if x & 0x8000:
-      self.facing = self.dschar()
-    else:
-      self.facing = None
+    self.facing = self.dschar() if x & 0x8000 else None
     self.z = self.dschar()
-    if y & 0x8000:
-      self.color = self.dushort()
-    else:
-      self.color = None
-    if y & 0x4000:
-      self.flag = self.duchar()
-    else:
-      self.flag = None
+    self.color = self.dushort() if y & 0x8000 else None
+    self.flag = self.duchar() if y & 0x4000 else None
     self.x = x & 0x7fff
     self.y = y & 0x3fff
 
@@ -617,11 +606,11 @@ class SendSkillsPacket(Packet):
           break
       assert id not in self.skills
       self.skills[id] = {
-        'id': id,
-        'val': self.dushort(), # Current value, in tenths
-        'base': self.dushort(), # Base value, in tenths
-        'lock': self.duchar(), # Lock status 0 = up, 1 = down, 2 =locked
-        'cap': self.dushort() if typ == 0x02 or typ == 0xdf else None
+          'id': id,
+          'val': self.dushort(),
+          'base': self.dushort(),
+          'lock': self.duchar(),
+          'cap': self.dushort() if typ in [0x02, 0xDF] else None,
       }
 
 
@@ -633,19 +622,19 @@ class AddItemsToContainerPacket(Packet):
   def decodeChild(self):
     self.length = self.dushort()
     itemNum = self.dushort()
-    self.items = []
-    for i in range(0, itemNum):
-      self.items.append({
-        'serial': self.duint(),
-        'graphic': self.dushort(),
-        'unknown': self.duchar(),
-        'amount': self.dushort(),
-        'x': self.dushort(),
-        'y': self.dushort(),
-        'slot': self.duchar(), #7090 version
-        'container': self.duint(),
-        'color': self.dushort(),
-      })
+    self.items = [
+        {
+            'serial': self.duint(),
+            'graphic': self.dushort(),
+            'unknown': self.duchar(),
+            'amount': self.dushort(),
+            'x': self.dushort(),
+            'y': self.dushort(),
+            'slot': self.duchar(),  # 7090 version
+            'container': self.duint(),
+            'color': self.dushort(),
+        } for _ in range(itemNum)
+    ]
 
 
 class OverallLightLevelPacket(Packet):
@@ -925,10 +914,7 @@ class DrawObjectPacket(Packet):
         break
       graphic = self.dushort()
       layer = self.duchar()
-      if graphic & 0x8000:
-        color = self.dushort()
-      else:
-        color = 0
+      color = self.dushort() if graphic & 0x8000 else 0
       self.equip.append({
         'serial': serial,
         'graphic': graphic,
@@ -1069,15 +1055,13 @@ class ServerListPacket(Packet):
     self.length = self.dushort()
     self.flag = self.duchar()
     self.numServers = self.dushort()
-    self.servers = []
-    for i in range(0, self.numServers):
-      self.servers.append({
+    self.servers = [{
         'idx': self.dushort(),
         'name': self.dstring(32),
         'full': self.duchar(),
         'tz': self.duchar(),
         'ip': self.dip(),
-      })
+    } for _ in range(self.numServers)]
 
 
 class CharactersPacket(Packet):
@@ -1088,20 +1072,17 @@ class CharactersPacket(Packet):
   def decodeChild(self):
     self.length = self.dushort()
     self.numChars = self.duchar()
-    self.chars = []
-    for i in range(0, self.numChars):
-      self.chars.append({
+    self.chars = [{
         'name': self.dstring(30),
         'pass': self.dstring(30),
-      })
+    } for _ in range(self.numChars)]
     self.numLocs = self.duchar()
     self.locs = []
-    for i in range(0, self.numLocs):
-      self.locs.append({
+    self.locs.extend({
         'idx': self.duchar(),
         'name': self.dstring(31),
         'area': self.dstring(31),
-      })
+    } for _ in range(self.numLocs))
     self.flags = self.duint()
 
 
@@ -1196,7 +1177,7 @@ class SendGumpDialogPacket(Packet):
     self.commands = self.dstring(cmdLen)
     textLines = self.dushort()
     self.texts = []
-    for i in range(0, textLines):
+    for _ in range(textLines):
       tlen = self.dushort() # In unicode 2-bytes chars
       self.texts.append(self.ducstring(tlen*2))
     self.duchar() # Trailing byte? TODO: check this
@@ -1319,10 +1300,7 @@ class GeneralInfoPacket(Packet):
     self.sub = self.dushort()
 
     if self.sub == self.SUB_FASTWALK:
-      self.keys = []
-      for i in range(0, 6):
-        self.keys.append(self.duint())
-
+      self.keys = [self.duint() for _ in range(6)]
     elif self.sub == self.SUB_ADDFWKEY:
       self.key = self.duint()
 
@@ -1356,13 +1334,10 @@ class GeneralInfoPacket(Packet):
 
     elif self.sub == self.SUB_MAPDIFF:
       mapNum = self.duint()
-      self.maps = []
-      for i in range(0, mapNum):
-        self.maps.append({
+      self.maps = [{
           'mpatches': self.duint(),
           'spatches': self.duint(),
-        })
-
+      } for _ in range(mapNum)]
     elif self.sub == self.SUB_MEGACLILOC:
       self.serial = self.duint()
       self.revision = self.duint()
@@ -1475,7 +1450,7 @@ class SmoothBoatPacket(Packet):
          'z':self.dsshort(),
         })
       except Exception as e:
-        self.log.error('failed to read obj {} of {} pktlen {}'.format(i,self.count,self.length))
+        self.log.error(f'failed to read obj {i} of {self.count} pktlen {self.length}')
         break
 
 
@@ -1485,10 +1460,11 @@ class SmoothBoatPacket(Packet):
 
 
 ''' Builds list of currectly defined packets, as a dict of classes sorted by ID '''
+
 classes = {}
 for name, obj in inspect.getmembers(sys.modules[__name__]):
   if inspect.isclass(obj) and hasattr(obj, 'cmd'):
     cmd = obj.cmd
-    if cmd in classes.keys():
+    if cmd in classes:
       raise RuntimeError("Duplicate packet 0x{:02x}".format(cmd))
     classes[cmd] = obj

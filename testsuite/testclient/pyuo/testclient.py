@@ -38,7 +38,7 @@ class TestBrain(brain.Brain):
   def onEvent(self, ev):
     '''overwrite brain method to directly send the events to the server'''
     if ev.type == Event.EVT_CLIENT_CRASH:
-      self.log.critical('Oops! Client crashed: {}'.format(ev.exception))
+      self.log.critical(f'Oops! Client crashed: {ev.exception}')
       raise RuntimeError('Oops! Client crashed')
     ev.clientid=self.id
     self.server.addevent(ev)
@@ -57,7 +57,7 @@ class TestBrain(brain.Brain):
       res = todos.popleft()
       todo=res["todo"]
       arg=res.get("arg",None)
-      self.log.info("got todo: {}->{}".format(todo,arg))
+      self.log.info(f"got todo: {todo}->{arg}")
       if todo=="disconnect":
         self.client.addTodo(brain.Event(brain.Event.EVT_EXIT))
         return False
@@ -184,7 +184,7 @@ class PolServer:
     except socket.timeout:
         return b''
     except Exception as e:
-      self.log.info("err {}".format(e))
+      self.log.info(f"err {e}")
       self.conn.close()
       return None
     return data
@@ -203,15 +203,15 @@ class PolServer:
 
   def sendEvent(self, ev):
     '''serialization method for client events'''
-    res={}
-    res["id"]=ev.clientid
-    res["type"]=ev.typestr()
+    res = {"id": ev.clientid, "type": ev.typestr()}
     if ev.type==Event.EVT_INIT:
       pass
-    elif (ev.type==Event.EVT_HP_CHANGED or
-        ev.type==Event.EVT_MANA_CHANGED or
-        ev.type==Event.EVT_STAM_CHANGED or
-        ev.type==Event.EVT_NOTORIETY):
+    elif ev.type in [
+          Event.EVT_HP_CHANGED,
+          Event.EVT_MANA_CHANGED,
+          Event.EVT_STAM_CHANGED,
+          Event.EVT_NOTORIETY,
+      ]:
       res["new"]=ev.new
       if hasattr(ev,"serial"):
         res["serial"]=ev.serial
@@ -220,8 +220,7 @@ class PolServer:
     elif ev.type==Event.EVT_MOVED:
       res["ack"]=ev.ack
       res["pos"]=[ev.x, ev.y, ev.z, ev.facing]
-    elif (ev.type==Event.EVT_NEW_MOBILE or
-          ev.type==Event.EVT_NEW_ITEM):
+    elif ev.type in [Event.EVT_NEW_MOBILE, Event.EVT_NEW_ITEM]:
       obj = ev.mobile if ev.type==Event.EVT_NEW_MOBILE else ev.item
       res["serial"]=obj.serial
       res["pos"]=[obj.x, obj.y, obj.z, obj.facing]
@@ -251,9 +250,7 @@ class PolServer:
     elif ev.type==Event.EVT_BOAT_MOVED:
       res['serial']=ev.boat.serial
       res["pos"]=[ev.boat.x, ev.boat.y, ev.boat.z]
-    elif ev.type==Event.EVT_OWNCREATE:
-      pass
-    else:
+    elif ev.type != Event.EVT_OWNCREATE:
       raise NotImplementedError("Unknown event {}",format(ev.type))
 
     self.send(json.dumps(res))
@@ -262,8 +259,7 @@ class PolServer:
     try:
       self.conn.send((data+"\n").encode())
     except Exception as e:
-      self.log.error("failed to send: {} {}".format(e,data))
-      pass
+      self.log.error(f"failed to send: {e} {data}")
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO, stream=sys.stderr,

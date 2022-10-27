@@ -128,11 +128,10 @@ def run_benchmark(exe_name, benchmark_flags):
         is_temp_output = True
         thandle, output_name = tempfile.mkstemp()
         os.close(thandle)
-        benchmark_flags = list(benchmark_flags) + \
-                          ['--benchmark_out=%s' % output_name]
+        benchmark_flags = (list(benchmark_flags) + [f'--benchmark_out={output_name}'])
 
     cmd = [exe_name] + benchmark_flags
-    print("RUNNING: %s" % ' '.join(cmd))
+    print(f"RUNNING: {' '.join(cmd)}")
     exitCode = subprocess.call(cmd)
     if exitCode != 0:
         print('TEST FAILED...')

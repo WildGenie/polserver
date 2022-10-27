@@ -33,10 +33,7 @@ class SourceChecker(metaclass=abc.ABCMeta):
 
 	def isIgnored(self, full):
 		rel = os.path.relpath(full, self.polroot)
-		for ign in self.IGNORE:
-			if rel.startswith(ign):
-				return True
-		return False
+		return any(rel.startswith(ign) for ign in self.IGNORE)
 
 	def walk(self, path):
 		''' Like os.walk() but accounts for self.IGNORE '''
@@ -60,7 +57,7 @@ class SourceChecker(metaclass=abc.ABCMeta):
 		''' Runs checks over all real source files
 		@return True on success, False on error
 		'''
-		print("Checking {}, POL root is {}".format(self.WHAT, self.polroot))
+		print(f"Checking {self.WHAT}, POL root is {self.polroot}")
 
 		analyzed = 0
 		ignored = 0
@@ -81,10 +78,8 @@ class SourceChecker(metaclass=abc.ABCMeta):
 				errors += 1
 
 		print()
-		print("Done. {} files analyzed, {} errors, {} ignored.".format(analyzed, errors, ignored))
-		if errors:
-			return False
-		return True
+		print(f"Done. {analyzed} files analyzed, {errors} errors, {ignored} ignored.")
+		return not errors
 
 	@abc.abstractmethod
 	def checkFile(self, path, ext):

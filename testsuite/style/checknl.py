@@ -26,7 +26,7 @@ class Main(util.SourceChecker):
 		super().__init__(quiet)
 
 		# Just to be sure
-		if os.linesep != '\r\n' and os.linesep != '\n':
+		if os.linesep not in ['\r\n', '\n']:
 			print(os.linesep)
 			raise NotImplementedError('Unhandled line ending style')
 
@@ -47,40 +47,31 @@ class Main(util.SourceChecker):
 		''' Checks for coherent line endings on the given text file '''
 
 		if nl not in ('auto', 'unix', 'windows'):
-			raise ValueError("Unknown newline style {}".format(type))
+			raise ValueError(f"Unknown newline style {type}")
 
 		if nl == 'auto':
-			if os.linesep == '\r\n':
-				nl = 'windows'
-			else:
-				nl = 'unix'
-
+			nl = 'windows' if os.linesep == '\r\n' else 'unix'
 		with open(path, 'rb') as f:
 			lines = f.readlines()
-			i = 0
 			unix = False
 			windows = False
-			for line in lines:
-				i += 1
+			for i, line in enumerate(lines, start=1):
 				if line.endswith(b'\r\n'):
 					windows = True
 				elif line.endswith(b'\n'):
 					unix = True
-				elif i == len(lines):
-					# Last line may have no ending
-					pass
-				else:
+				elif i != len(lines):
 					print(line)
 					raise RuntimeError('This should never happen')
 
 		if windows and unix:
-			print('ERROR: mixed line endings in "{}"'.format(path))
+			print(f'ERROR: mixed line endings in "{path}"')
 			return False
 		elif nl=='windows' and unix:
-			print('ERROR: Unix line endings in "{}"'.format(path))
+			print(f'ERROR: Unix line endings in "{path}"')
 			return False
 		elif nl=='unix' and windows:
-			print('ERROR: Windows line endings in "{}"'.format(path))
+			print(f'ERROR: Windows line endings in "{path}"')
 			return False
 
 		return True
@@ -101,9 +92,15 @@ if __name__ == '__main__':
 	if Main(args.quiet).run():
 		total = int(round((time.time()-start)*1000))
 		if (os.environ.get('APPVEYOR',None)):
-			os.system('appveyor UpdateTest -Name TestStyleNL -Framework Own -FileName Style -Outcome {} -Duration {}'.format('Passed', total))
+			os.system(
+				f'appveyor UpdateTest -Name TestStyleNL -Framework Own -FileName Style -Outcome Passed -Duration {total}'
+			)
+
 		sys.exit(0)
 	total = int(round((time.time()-start)*1000))
 	if (os.environ.get('APPVEYOR',None)):
-		os.system('appveyor UpdateTest -Name TestStyleNL -Framework Own -FileName Style -Outcome {} -Duration {}'.format('Failed', total))
+		os.system(
+			f'appveyor UpdateTest -Name TestStyleNL -Framework Own -FileName Style -Outcome Failed -Duration {total}'
+		)
+
 	sys.exit(1)

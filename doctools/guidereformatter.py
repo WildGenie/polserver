@@ -29,7 +29,7 @@ class Parser(html.parser.HTMLParser):
 			self.chapName = ''
 			return
 
-		raise RuntimeError('Unexpected tag {} in status "{}"'.format(tag, self.status))
+		raise RuntimeError(f'Unexpected tag {tag} in status "{self.status}"')
 
 	def handle_endtag(self, tag):
 
@@ -41,7 +41,7 @@ class Parser(html.parser.HTMLParser):
 			self.status = 'chapter'
 			return
 
-		raise RuntimeError('Unexpected end tag {} in status "{}"'.format(tag, self.status))
+		raise RuntimeError(f'Unexpected end tag {tag} in status "{self.status}"')
 
 	#	print("Encountered an end tag :", tag)
 	def handle_data(self, data):
@@ -53,13 +53,13 @@ class Parser(html.parser.HTMLParser):
 			self.chapName += data.strip()
 			return
 
-		raise RuntimeError('Unexpected data "{}" in status "{}"'.format(data, self.status))
+		raise RuntimeError(f'Unexpected data "{data}" in status "{self.status}"')
 
 	def handle_startendtag(self, tag, attrs):
 		if tag == 'br' and self.status == 'chapter':
 			return
 
-		raise RuntimeError('Unexpected full tag {} in status "{}"'.format(tag, self.status))
+		raise RuntimeError(f'Unexpected full tag {tag} in status "{self.status}"')
 
 	def handle_entityref(self, name):
 		raise NotImplementedError()
@@ -80,7 +80,7 @@ class Parser(html.parser.HTMLParser):
 		raise NotImplementedError()
 
 	def newChapter(self):
-		print('<h3><a name="{}">{}</a></h3>'.format(self.chapAnchor, self.chapName))
+		print(f'<h3><a name="{self.chapAnchor}">{self.chapName}</a></h3>')
 		del self.chapAnchor
 		del self.chapName
 
@@ -92,10 +92,10 @@ class Main:
 		parser = Parser()
 		with open(os.path.join('..','docs','docs.polserver.com','pol100','include','escriptguide.inc')) as f:
 			while True:
-				l = f.readline()
-				if not l:
+				if l := f.readline():
+					parser.feed(l)
+				else:
 					break
-				parser.feed(l)
 
 
 if __name__ == '__main__':

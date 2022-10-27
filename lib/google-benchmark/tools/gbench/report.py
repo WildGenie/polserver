@@ -36,10 +36,12 @@ def color_format(use_color, fmt_str, *args, **kwargs):
     """
     assert use_color is True or use_color is False
     if not use_color:
-        args = [arg if not isinstance(arg, BenchmarkColor) else BC_NONE
-                for arg in args]
-        kwargs = {key: arg if not isinstance(arg, BenchmarkColor) else BC_NONE
-                  for key, arg in kwargs.items()}
+        args = [BC_NONE if isinstance(arg, BenchmarkColor) else arg for arg in args]
+        kwargs = {
+            key: BC_NONE if isinstance(arg, BenchmarkColor) else arg
+            for key, arg in kwargs.items()
+        }
+
     return fmt_str.format(*args, **kwargs)
 
 
@@ -59,9 +61,9 @@ def calculate_change(old_val, new_val):
     """
     Return a float representing the decimal change between old_val and new_val.
     """
-    if old_val == 0 and new_val == 0:
-        return 0.0
     if old_val == 0:
+        if new_val == 0:
+            return 0.0
         return float(new_val - old_val) / (float(old_val + new_val) / 2)
     return float(new_val - old_val) / abs(old_val)
 

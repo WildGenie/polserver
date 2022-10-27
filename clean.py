@@ -28,9 +28,7 @@ class Cleaner:
 	def findDoxygen(self):
 		''' Returns list of doxygen-generated files '''
 		doxygen = os.path.join(self.root, 'docs', 'doxygen', 'html')
-		if os.path.exists(doxygen):
-			return [doxygen]
-		return None
+		return [doxygen] if os.path.exists(doxygen) else None
 
 	def clearDoxygen(self):
 		self.__delFromList(self.findDoxygen())
@@ -42,9 +40,12 @@ class Cleaner:
 		for f in os.listdir(lib):
 			path = os.path.join(lib, f)
 			if os.path.isdir(path) and re.match(r'^boost_[0-9_]+$', f):
-				for f2 in os.listdir(path):
-					if not f2.startswith('buildboost') and not f2 == '.gitignore':
-						ret.append(os.path.join(path,f2))
+				ret.extend(
+					os.path.join(path, f2)
+					for f2 in os.listdir(path)
+					if not f2.startswith('buildboost') and f2 != '.gitignore'
+				)
+
 		return ret
 
 	def clearBoost(self):
@@ -91,11 +92,11 @@ class Cleaner:
 
 	def findEmpty(self):
 		''' Returns list of empty folders '''
-		ret = []
-		for folder, subfolders, files in os.walk(self.root):
-			if not subfolders and not files:
-				ret.append(os.path.join(self.root,folder))
-		return ret
+		return [
+			os.path.join(self.root, folder)
+			for folder, subfolders, files in os.walk(self.root)
+			if not subfolders and not files
+		]
 
 	def clearEmpty(self):
 		self.__delFromList(self.findEmpty())
@@ -119,11 +120,11 @@ if __name__ == '__main__':
 			prompt = "[y/N]"
 
 		while True:
-			print("{} {} ".format(question,prompt), end='', flush=True)
+			print(f"{question} {prompt} ", end='', flush=True)
 			choice = input().lower()
 			if default is not None and choice == '':
 				return default
-			elif choice in valid.keys():
+			elif choice in valid:
 				return valid[choice]
 			print('Please respond with "y" or "n"')
 

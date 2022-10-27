@@ -30,7 +30,7 @@ class Change:
 		if date is None:
 			self.date = None
 		else:
-			if len(date) == 4 or len(date) == 3:
+			if len(date) in {4, 3}:
 				date = '-'.join(map(lambda i: i.zfill(2), date.split('-')))
 
 			if len(date) == 5:
@@ -43,7 +43,7 @@ class Change:
 		self.subs = []
 
 	def __str__(self):
-		return "{} {}\n".format(self.date, self.author) + "\n".join(map(str,self.subs))
+		return f"{self.date} {self.author}\n" + "\n".join(map(str,self.subs))
 
 	def __iter__(self):
 		return self.subs.__iter__()
@@ -64,12 +64,11 @@ class SubChange:
 
 	def addLine(self, line, indent):
 		inddiff = self.__calcIndentLevel(indent) - self.indentlevel
-		if inddiff < 0:
-			inddiff = 0
+		inddiff = max(inddiff, 0)
 		self.lines.append(' '*inddiff + line)
 
 	def __str__(self):
-		return "{}:\n".format(self.type) + "\n".join(self.lines)
+		return f"{self.type}:\n" + "\n".join(self.lines)
 
 
 class CoreChanges:
@@ -154,9 +153,7 @@ class CoreChanges:
 				if not curchange:
 					raise LineParseError('Expecting a core change start', line, l)
 
-				# Check for first change line
-				m = self.CHANGEFIRST.match(line)
-				if m:
+				if m := self.CHANGEFIRST.match(line):
 					if not curchange:
 						raise LineParseError('Got a change start line, but there is no active change', line, l)
 					if cursub:
@@ -165,14 +162,12 @@ class CoreChanges:
 					cursub.lines.append(m.group(5).strip())
 					continue
 
-				# Check for standard change line
-				m = self.CHANGELINE.match(line)
-				if m:
+				if m := self.CHANGELINE.match(line):
 					if not curchange:
 						raise LineParseError('Got a change line, but there is no active change', line, l)
 					if not cursub:
 						if currel.name not in ['POL096','POL095']:
-							print("WARNING: malformed subchange at line {}".format(l))
+							print(f"WARNING: malformed subchange at line {l}")
 						cursub = SubChange(None, m.group(1))
 					cursub.addLine(m.group(2), m.group(1))
 					continue
@@ -206,7 +201,7 @@ class Main:
 		try:
 			changes = CoreChanges(os.path.join(mydir,'..','pol-core','doc','core-changes.txt'))
 		except LineParseError as e:
-			print('ERROR parsing line {}: {}\nLine: "{}"'.format(e.linenum, e, e.line))
+			print(f'ERROR parsing line {e.linenum}: {e}\nLine: "{e.line}"')
 			return
 
 		# Now generate the output XML
@@ -247,7 +242,7 @@ class Main:
 		with open(outFile, 'wt', encoding='utf-8') as f:
 			f.write(out)
 
-		print("{} written.".format(outFile))
+		print(f"{outFile} written.")
 
 
 if __name__ == '__main__':
