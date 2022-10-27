@@ -54,7 +54,7 @@ class Main:
 
 			if i == len(lines) - 1:
 				if status not in ('inHistory', 'inNotes'):
-					raise NoHistoryBlockFound('invalid status {} on last line'.format(status), line)
+					raise NoHistoryBlockFound(f'invalid status {status} on last line', line)
 
 				if ls != b'*/':
 					raise NoHistoryBlockFound('no closing tag on last line', line)
@@ -67,11 +67,7 @@ class Main:
 					raise NoHistoryBlockFound('first line is not an empty comment start', line)
 
 				# Detect line endings
-				if line[-2:] == b'\r\n':
-					nl = b'\r\n'
-				else:
-					nl = b'\n'
-
+				nl = b'\r\n' if line[-2:] == b'\r\n' else b'\n'
 				new += b'/** @file' + nl
 				new += b' *' + nl
 				status = 'waitHistory'
@@ -89,10 +85,11 @@ class Main:
 				status = 'inHistory'
 				continue
 
-			if status in ('inHistory', 'inNotes'):
-				if ls == b'' or ls.strip(b'=') == b'':
-					# Ignoring a "=======" or empty line
-					continue
+			if status in ('inHistory', 'inNotes') and (
+				ls == b'' or ls.strip(b'=') == b''
+			):
+				# Ignoring a "=======" or empty line
+				continue
 
 			if status == 'inHistory':
 				# Reading history, be aware of notes
@@ -112,7 +109,7 @@ class Main:
 				new += b' * @note ' + ls + nl
 				continue
 
-			raise RuntimeError('Unhandled status {}'.format(status))
+			raise RuntimeError(f'Unhandled status {status}')
 
 		#print(b'\n'.join(lines).decode())
 		#print(new.decode())

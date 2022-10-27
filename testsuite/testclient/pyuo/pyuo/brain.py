@@ -36,7 +36,7 @@ class Brain:
     @param client Client: a client instance, already connected, will start it
     '''
     idstr=''if id is None else str(id)
-    self.log = logging.getLogger('brain'+idstr)
+    self.log = logging.getLogger(f'brain{idstr}')
     self.started = threading.Event()
     self.events = collections.deque()
     self.eventsLock = threading.Lock()
@@ -101,7 +101,7 @@ class Brain:
     elif ev.type == Event.EVT_NEW_MOBILE:
       self.onNewMobile(ev.mobile)
     elif ev.type == Event.EVT_CLIENT_CRASH:
-      self.log.critical('Oops! Client crashed: {}'.format(ev.exception))
+      self.log.critical(f'Oops! Client crashed: {ev.exception}')
       raise RuntimeError('Oops! Client crashed')
     else:
       raise NotImplementedError("Unknown event {}",format(ev.type))
@@ -121,7 +121,8 @@ class Brain:
   def event(self, ev):
     ''' Internal function, injects a single event, called from the client thread '''
     if not isinstance(ev, Event):
-      raise RuntimeError("Unknown event, expecting an Event instance, got {}".format(type(ev)))
+      raise RuntimeError(
+          f"Unknown event, expecting an Event instance, got {type(ev)}")
 
     with self.eventsLock:
       self.events.append(ev)
@@ -147,33 +148,33 @@ class Brain:
 
   def onHpChange(self, old, new):
     ''' Called when HP amount changes '''
-    self.log.debug('HP changed from {} to {}'.format(old, new))
+    self.log.debug(f'HP changed from {old} to {new}')
 
   def onManaChange(self, old, new):
     ''' Called when HP amount changes '''
-    self.log.debug('MANA changed from {} to {}'.format(old, new))
+    self.log.debug(f'MANA changed from {old} to {new}')
 
   def onStamChange(self, old, new):
     ''' Called when HP amount changes '''
-    self.log.debug('STAM changed from {} to {}'.format(old, new))
+    self.log.debug(f'STAM changed from {old} to {new}')
 
   def onNotorietyChange(self, old, new):
     ''' Called when notoriety changes '''
-    self.log.debug('NOTORIETY changed from {} to {}'.format(old, new))
+    self.log.debug(f'NOTORIETY changed from {old} to {new}')
 
   def onMovement(self, oldx, oldy, oldz, oldfacing, x, y, z, facing, ack):
     ''' Called when movement has been confirmed '''
-    self.log.debug('MOVEMENT {} {},{},{}.{} -> {},{},{}.{}'.format(
-        'ack' if ack else 'rejected', oldx, oldy, oldz,
-        oldfacing, x, y, z, facing))
+    self.log.debug(
+        f"MOVEMENT {'ack' if ack else 'rejected'} {oldx},{oldy},{oldz}.{oldfacing} -> {x},{y},{z}.{facing}"
+    )
 
   def onNewMobile(self, mobile):
     ''' Called when a new mobile is in sight '''
-    self.log.debug('NEW MOBILE: {}'.format(mobile))
+    self.log.debug(f'NEW MOBILE: {mobile}')
 
   def onSpeech(self, speech):
     ''' Called when somebody said something or on a sys or global chat message '''
-    self.log.debug('SPEECH received: {}'.format(speech))
+    self.log.debug(f'SPEECH received: {speech}')
 
 
 class Event:

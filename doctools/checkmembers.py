@@ -8,7 +8,7 @@ def parseMemberDec():
     with open('../pol-core/bscript/objmembers.h','r') as f:
         in_dec=False
         decs=[]
-        for l in f.readlines():
+        for l in f:
             l=l.strip();
             if l=='enum MemberID':
                 in_dec=True
@@ -22,10 +22,10 @@ def parseMemberDec():
     return decs
 
 def parseMemberDef(decs):
-    defs=dict()
+    defs = {}
     with open('../pol-core/bscript/objaccess.cpp','r') as f:
         in_def=False
-        for l in f.readlines():
+        for l in f:
             l=l.strip();
             if l.startswith('ObjMember object_members[]'):
                 in_def=True
@@ -52,7 +52,7 @@ def parseFile(file,defs,members):
         openb=0
         linec=0
         in_c=False
-        for l in f.readlines():
+        for l in f:
             linec+=1
             l=l.strip()
             if l.startswith('//'):
@@ -83,7 +83,7 @@ def parseFile(file,defs,members):
                     openb+=1
                 if '}' in l:
                     openb-=1
-                    if not openb and in_d:
+                    if not openb:
                         if len(supported):
                             if active in members:
                                 members[active]+=supported
@@ -93,10 +93,7 @@ def parseFile(file,defs,members):
                         in_d=False
                 if l.startswith('case'):
                     try:
-                        if '::' in l:
-                            m=l.split('::')[1]
-                        else:
-                            m=l
+                        m = l.split('::')[1] if '::' in l else l
                         m=m.replace('(','').replace(')','')
                         m=m.split(':')[0].split()[-1]
                         supported.append(defs[m])
@@ -106,8 +103,6 @@ def parseFile(file,defs,members):
                         #print(l)
                         #print(linec)
                         continue
-                        raise
-
                 elif 'if ( stricmp' in l:
                     try:
                         m=l.split('"')[1]
@@ -124,10 +119,10 @@ def parseFile(file,defs,members):
     return members
 
 def checkDocs():
-    docs=dict()
+    docs = {}
     with open('../docs/docs.polserver.com/pol100/objref.xml','r') as f:
         in_c=None
-        for l in f.readlines():
+        for l in f:
             l=l.strip()
             if l.startswith('<class'):
                 n=l.split('name="')[1].split('"')[0]
@@ -148,7 +143,7 @@ decs=parseMemberDec()
 defs =parseMemberDef(decs)
 #pprint(defs)
 
-members=dict()
+members = {}
 for r,d,files in os.walk('../pol-core/'):
     for f in files:
         if f.endswith('.cpp'):
@@ -160,19 +155,19 @@ docs=checkDocs()
 
 for dc,dm in docs.items():
     pc=translate.get(dc,dc)
-    
+
     if pc in members:
-        print('checking {}'.format(dc))
+        print(f'checking {dc}')
         for m in members[pc]:
             if m not in dm:
-                print('   {} not in {}'.format(m,dc))
+                print(f'   {m} not in {dc}')
         for m in dm:
             if m not in members[pc]:
-                print('   {} docentry not found'.format(m))
+                print(f'   {m} docentry not found')
     else:
-        print('Class {} docentry not found'.format(pc))
+        print(f'Class {pc} docentry not found')
 
 for pc, pm in members.items():
     dc=translate.get(pc,pc)
     if dc not in docs:
-        print('Class {} not found with {}'.format(dc,pm))
+        print(f'Class {dc} not found with {pm}')

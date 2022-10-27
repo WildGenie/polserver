@@ -42,7 +42,7 @@ class EmFile:
 					self.funcs[name] = args
 					continue
 
-				raise NotImplementedError("Couldn't parse line:\n{}".format(line))
+				raise NotImplementedError(f"Couldn't parse line:\n{line}")
 
 	@staticmethod
 	def stripLine(line):
@@ -54,20 +54,18 @@ class EmFile:
 
 	def __parseConst(self, line):
 		m = self.CONSTRE.match(line)
-		if not m:
-			return None, None
-
-		return m.group(1), m.group(2)
+		return (m.group(1), m.group(2)) if m else (None, None)
 
 	def __parseFunc(self, line):
 		m = self.FUNCRE.match(line)
-		if not m:
-			return None, None
-
-		return m.group(1), list(map(lambda i: i.strip(), m.group(2).split(',')))
+		return (
+			(m.group(1), list(map(lambda i: i.strip(), m.group(2).split(','))))
+			if m
+			else (None, None)
+		)
 
 	def __str__(self):
-		return "EMFile<{}, consts: {}, funcs: {}".format(self.path, self.consts, self.funcs)
+		return f"EMFile<{self.path}, consts: {self.consts}, funcs: {self.funcs}"
 
 
 class Main:
@@ -80,7 +78,7 @@ class Main:
 				if f.endswith('.em'):
 					path = os.path.join(root,f)
 					name = os.path.splitext(f)[0]
-					print('Loading {}...'.format(f), end='')
+					print(f'Loading {f}...', end='')
 					emfiles[name] = EmFile(path, name)
 					print('done.')
 
@@ -92,15 +90,15 @@ class Main:
 		for m in modules.getroot().findall('em'):
 			name = m.get('name')[:-2]
 			if name not in emfiles.keys():
-				print("ERROR: unknown module {} defined in modules.xml".format(name))
+				print(f"ERROR: unknown module {name} defined in modules.xml")
 			modlist.append(name)
-		for name in emfiles.keys():
+		for name in emfiles:
 			if name not in modlist:
-				print("ERROR: module {} is not defined in modules.xml".format(name))
+				print(f"ERROR: module {name} is not defined in modules.xml")
 
 		# 3. Load and parse every module's XML defintion, do rest of the checks
 		for modfile in modlist:
-			xmldoc = ET.parse(os.path.join(docPath,modfile+'em.xml'))
+			xmldoc = ET.parse(os.path.join(docPath, f'{modfile}em.xml'))
 
 			consts = []
 			for const in xmldoc.findall('./fileheader/constant'):
@@ -109,26 +107,35 @@ class Main:
 					continue
 				m = EmFile.CONSTRE.match(txt)
 				if not m:
-					raise NotImplementedError('Unable to parse constant "{}"'.format(txt))
+					raise NotImplementedError(f'Unable to parse constant "{txt}"')
 				name = m.group(1)
 				val = m.group(2)
 				consts.append(name)
 
 				if name not in emfiles[modfile].consts.keys():
-					print("ERROR: constant {} is documented in {}em.xml but no longer existing in {}.em".format(name, modfile, modfile))
+					print(
+						f"ERROR: constant {name} is documented in {modfile}em.xml but no longer existing in {modfile}.em"
+					)
+
 				elif val != emfiles[modfile].consts[name]:
-					print('ERROR: constant {} value differs. em: "{}", xml: "{}"'.format(name, val, emfiles[modfile].consts[name]))
+					print(
+						f'ERROR: constant {name} value differs. em: "{val}", xml: "{emfiles[modfile].consts[name]}"'
+					)
+
 
 			for const in emfiles[modfile].consts.keys():
 				if const not in consts:
-					print("ERROR: constant {} is defined in {}.em but not documented in {}em.xml".format(const, modfile, modfile))
+					print(
+						f"ERROR: constant {const} is defined in {modfile}.em but not documented in {modfile}em.xml"
+					)
+
 
 			funcs = []
 			for func in xmldoc.getroot().findall('function'):
 				proto = EmFile.stripLine(func.find('prototype').text.replace('\n',' '))
 				m = EmFile.FUNCRE.match(proto)
 				if not m:
-					raise NotImplementedError('Unable to parse function "{}"'.format(proto))
+					raise NotImplementedError(f'Unable to parse function "{proto}"')
 				name = m.group(1)
 				args = list(map(lambda i: i.strip(), m.group(2).split(',')))
 				funcs.append(name)
@@ -136,23 +143,38 @@ class Main:
 				infile = True
 				if name not in emfiles[modfile].funcs.keys():
 					infile = False
-					print("ERROR: function {} is documented in {}em.xml but no longer existing in {}.em".format(name, modfile, modfile))
+					print(
+						f"ERROR: function {name} is documented in {modfile}em.xml but no longer existing in {modfile}.em"
+					)
+
 				elif sorted(map(lambda i: i.lower(),args)) != sorted(map(lambda i: i.lower(),emfiles[modfile].funcs[name])):
-					print('ERROR: function {} args differs. em: "{}", xml: "{}"'.format(name, emfiles[modfile].funcs[name], args))
+					print(
+						f'ERROR: function {name} args differs. em: "{emfiles[modfile].funcs[name]}", xml: "{args}"'
+					)
+
 
 				if infile:
 					parameters = list(map(lambda i: i.get('name').strip().split(' ')[0].split(':')[0].strip().lower(), func.findall('parameter')))
 					empars = list(map(lambda i:                 i.strip().split(' ')[0].split(':')[0].strip().lower(), emfiles[modfile].funcs[name]))
 					for p in parameters:
 						if p and p not in empars:
-							print("ERROR: parameter {} for function {} is documented in {}em.xml but no longer existing in {}.em".format(p, name, modfile, modfile))
+							print(
+								f"ERROR: parameter {p} for function {name} is documented in {modfile}em.xml but no longer existing in {modfile}.em"
+							)
+
 					for p in empars:
 						if p and p not in parameters:
-							print("ERROR: parameter {} for function {} is defined in {}.em but not documented in {}em.xml".format(p, name, modfile, modfile))
+							print(
+								f"ERROR: parameter {p} for function {name} is defined in {modfile}.em but not documented in {modfile}em.xml"
+							)
+
 
 			for func in emfiles[modfile].funcs.keys():
 				if func not in funcs:
-					print("ERROR: function {} is defined in {}.em but not documented in {}em.xml".format(func, modfile, modfile))
+					print(
+						f"ERROR: function {func} is defined in {modfile}.em but not documented in {modfile}em.xml"
+					)
+
 
 		# 4. Done!
 		print()

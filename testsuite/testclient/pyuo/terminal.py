@@ -67,8 +67,9 @@ class Ui(brain.Brain):
 			verboseFmt = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 			logFile = os.path.join(
 				os.path.dirname(os.path.abspath(__file__)),
-				os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]+'.log'
+				f'{os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]}.log',
 			)
+
 			fileHandler = logging.FileHandler(logFile, mode='w')
 			fileHandler.setFormatter(verboseFmt)
 			rootLog.addHandler(fileHandler)
@@ -82,19 +83,19 @@ class Ui(brain.Brain):
 			pwd = InputDialog(self.scr, 'Password:', 25).edit()
 
 			# Connect to server
-			self.updStatus('logging in {}:{}'.format(host,port))
+			self.updStatus(f'logging in {host}:{port}')
 			self.refreshAll()
 			cli = client.Client()
 			try:
 				servers = cli.connect(host, port, user, pwd)
 			except client.LoginDeniedError as e:
-				self.updStatus('login denied ({})'.format(e))
+				self.updStatus(f'login denied ({e})')
 			except ConnectionRefusedError as e:
 				self.updStatus(str(e))
 			else:
 				break
 
-		self.updStatus('logged in as {}'.format(user))
+		self.updStatus(f'logged in as {user}')
 
 		# Select server
 		self.log.debug(servers)
@@ -102,7 +103,7 @@ class Ui(brain.Brain):
 		idx = SelectDialog(self.scr, 'Select a server', serverList, 30, 5).select()
 		self.server = servers[idx]
 
-		self.updStatus('selecting server {}'.format(self.server['name']))
+		self.updStatus(f"selecting server {self.server['name']}")
 		self.refreshAll()
 
 		# Select character
@@ -112,7 +113,7 @@ class Ui(brain.Brain):
 		idx = SelectDialog(self.scr, 'Select a character', charList, 30, 5).select()
 		self.char = chars[idx]
 
-		self.updStatus('selecting character {}'.format(self.char['name']))
+		self.updStatus(f"selecting character {self.char['name']}")
 		self.refreshAll()
 
 		# Start brain
@@ -123,7 +124,7 @@ class Ui(brain.Brain):
 	def init(self):
 		self.timeout = 0.1
 		p = self.client.player
-		self.updStatus('playing {}@{}'.format(self.char['name'], self.server['name']))
+		self.updStatus(f"playing {self.char['name']}@{self.server['name']}")
 		self.updVitals()
 		self.updMisc(p.status, p.war, p.notoriety)
 		self.updAspect(p.serial, p.graphic, p.color)
@@ -157,10 +158,10 @@ class Ui(brain.Brain):
 		elif level == logging.CRITICAL:
 			levelName = 'CRITICAL'
 		else:
-			levelName = "UNKNOWN{}".format(level)
+			levelName = f"UNKNOWN{level}"
 		##TODO: move help on a dedicated panel to be shown at startup
 		help = '(press: "v" to cycle; "enter" to talk, arrows to move)'
-		self.lwin.updTitle("Verbosity: {}+ {}".format(levelName, help))
+		self.lwin.updTitle(f"Verbosity: {levelName}+ {help}")
 		self.lwin.refresh()
 
 	def formatVal(self, val, hex=False):
@@ -173,16 +174,15 @@ class Ui(brain.Brain):
 	def updVitals(self):
 		p = self.client.player
 		fv = self.formatVal
-		text = "hp {}/{}, mana {}/{}, stam {}/{}".format(
-				fv(p.hp), fv(p.maxhp), fv(p.mana), fv(p.maxmana), fv(p.stam), fv(p.maxstam))
+		text = f"hp {fv(p.hp)}/{fv(p.maxhp)}, mana {fv(p.mana)}/{fv(p.maxmana)}, stam {fv(p.stam)}/{fv(p.maxstam)}"
+
 		self.swin.updLabel('vitals', text)
 		self.swin.refresh()
 
 	def updAspect(self, serial, graphic, color):
 		fh = lambda i: self.formatVal(i, True)
 		fv = self.formatVal
-		text = "ser: {}, gra: {}, col: {}".format(
-				fh(serial), fh(graphic), fv(color))
+		text = f"ser: {fh(serial)}, gra: {fh(graphic)}, col: {fv(color)}"
 		self.swin.updLabel('aspect', text)
 		self.swin.refresh()
 
@@ -235,7 +235,7 @@ class Ui(brain.Brain):
 		else:
 			notostr = 'unknown'
 
-		text = "sta: {}, war: {}, noto: {}".format(stastr, warstr, notostr)
+		text = f"sta: {stastr}, war: {warstr}, noto: {notostr}"
 		self.swin.updLabel('misc', text)
 		self.swin.refresh()
 
@@ -244,10 +244,12 @@ class Ui(brain.Brain):
 		self.updMobiles()
 
 	def updMobiles(self):
-		mobiles = []
-		for obj in self.client.objects.values():
-			if isinstance(obj,client.Mobile) and obj.serial != self.player.serial:
-				mobiles.append(obj)
+		mobiles = [
+			obj
+			for obj in self.client.objects.values()
+			if isinstance(obj, client.Mobile) and obj.serial != self.player.serial
+		]
+
 		self.mwin.updMobiles(mobiles)
 		self.mwin.refresh()
 
@@ -283,8 +285,6 @@ class Ui(brain.Brain):
 			newLevel = logging.ERROR
 		elif level == logging.ERROR:
 			newLevel = logging.CRITICAL
-		elif level == logging.CRITICAL:
-			newLevel = logging.INFO
 		else:
 			newLevel = logging.INFO
 		self.logHandler.setLevel(newLevel)
@@ -373,9 +373,7 @@ class CursesWinProxy:
 		self.win.addstr(y, x, self.sanitize(str), attr)
 
 	def __getattr__(self, name):
-		if name == 'win':
-			return AttributeError()
-		return getattr(self.win, name)
+		return AttributeError() if name == 'win' else getattr(self.win, name)
 
 	def __setattr__(self, name, value):
 		if name == 'win':
@@ -452,7 +450,7 @@ class MapWindow(BaseWindow):
 			return
 		self.pos = newpos
 
-		self.updTitle("{},{},{}".format(x,y,z))
+		self.updTitle(f"{x},{y},{z}")
 		fa = self.facingAsArrow(facing)
 		color = self.notorietyColor(notoriety)
 		self.win.addch(self.cx, self.cy, self.facingAsArrow(facing), color)
@@ -480,7 +478,7 @@ class MapWindow(BaseWindow):
 				color = self.notorietyColor(mob.notoriety)
 				self.win.addch(mapy, mapx, fa, color)
 			else:
-				self.log.info('Mobile out of map at {},{}'.format(relx, rely))
+				self.log.info(f'Mobile out of map at {relx},{rely}')
 
 	def facingAsArrow(self, facing):
 		if facing == 0:
@@ -497,9 +495,7 @@ class MapWindow(BaseWindow):
 			return '↙'
 		if facing == 6:
 			return '←'
-		if facing == 7:
-			return '↖'
-		return '?'
+		return '↖' if facing == 7 else '?'
 
 	def notorietyColor(self, notoriety):
 		if notoriety == client.Mobile.NOTO_INNOCENT:
@@ -514,9 +510,7 @@ class MapWindow(BaseWindow):
 			return Ui.colors['magenta']
 		if notoriety == client.Mobile.NOTO_MURDERER:
 			return Ui.colors['red']
-		if notoriety == client.Mobile.NOTO_INVUL:
-			return Ui.colors['cyan']
-		return 0
+		return Ui.colors['cyan'] if notoriety == client.Mobile.NOTO_INVUL else 0
 
 
 class StatusWindow(BaseWindow):
@@ -545,12 +539,14 @@ class StatusWindow(BaseWindow):
 		try:
 			label = self.LABELS[name]
 		except KeyError:
-			raise ValueError('Invalid label "{}". Valid labels are: {}'.format(
-					name, ','.join(self.LABELS.keys())))
+			raise ValueError(
+				f"""Invalid label "{name}". Valid labels are: {','.join(self.LABELS.keys())}"""
+			)
+
 		x = len(label['l']) + 2
 		maxLen = self.WIDTH - x - 2
 		if len(text) > maxLen:
-			text = text[:maxLen-1] + '…'
+			text = f'{text[:maxLen - 1]}…'
 		self.win.addnstr(label['y'], label['x'] + x, ' ' * maxLen, maxLen)
 		self.win.addnstr(label['y'], label['x'] + x, text, maxLen)
 
@@ -634,9 +630,7 @@ class InputDialog(BaseDialog):
 		return res
 
 	def onKey(self, key):
-		if key == ord('\n'):
-			return 7 #Ctrl+G
-		return key
+		return 7 if key == ord('\n') else key
 
 
 class SelectDialog(BaseDialog):
@@ -734,8 +728,9 @@ if __name__ == '__main__':
 	if args.log:
 		errFile = os.path.join(
 			os.path.dirname(os.path.abspath(__file__)),
-			os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]+'.err'
+			f'{os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]}.err',
 		)
+
 		sys.stderr = open(errFile, 'wt')
 
 	try:

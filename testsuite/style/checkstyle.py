@@ -41,13 +41,7 @@ class Main(util.SourceChecker):
 		if 'baredistrofiles' in path:
 			return self.SKIP
 
-		if not self.checkKWStyle(path):
-			return False
-
-		if not self.checkIndent(path):
-			return False
-
-		return True
+		return bool(self.checkIndent(path)) if self.checkKWStyle(path) else False
 
 	def checkKWStyle(self, path):
 		cmd = ('KWStyle', '-xml', 'style.kws.xml', '-gcc', '-v', path)
@@ -58,7 +52,7 @@ class Main(util.SourceChecker):
 			assert not len(pe), pe
 			return True
 
-		print('File "{}" has invalid style'.format(path))
+		print(f'File "{path}" has invalid style')
 		print(po.decode(), pe.decode())
 		return False
 
@@ -71,7 +65,7 @@ class Main(util.SourceChecker):
 				levels.add(lspaces)
 
 		if 2 not in levels and (4 in levels or 8 in levels):
-			print('File "{}" has 4 instead of 2 spaces indentation style'.format(path))
+			print(f'File "{path}" has 4 instead of 2 spaces indentation style')
 			return False
 
 		return True
@@ -84,7 +78,7 @@ class Main(util.SourceChecker):
 			try:
 				originalraw = f.read()
 			except UnicodeDecodeError as e:
-				print('File "{}" has invalid unicode: {}'.format(path, e))
+				print(f'File "{path}" has invalid unicode: {e}')
 				return False
 			original = originalraw.splitlines(keepends=True)
 
@@ -93,19 +87,19 @@ class Main(util.SourceChecker):
 		proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		po, pe = proc.communicate(originalraw.encode())
 
-		assert proc.returncode == 0, "Return code {}".format(proc.returncode)
-		assert len(pe) == 0, "clang-format error: {}".format(pe)
+		assert proc.returncode == 0, f"Return code {proc.returncode}"
+		assert len(pe) == 0, f"clang-format error: {pe}"
 		try:
 			formatted = po.decode().splitlines(keepends=True)
 		except UnicodeDecodeError as e:
-			print('File "{}" has invalid unicode during formatting: {}'.format(path, e))
+			print(f'File "{path}" has invalid unicode during formatting: {e}')
 			return False
 
 		diff = list(difflib.unified_diff(original, formatted, 'current', 'formatted'))
 		if not len(diff):
 			return True
 
-		print('File "{}" has invalid style'.format(path))
+		print(f'File "{path}" has invalid style')
 		for d in difflib.unified_diff(self.hightLightSpaces(original), self.hightLightSpaces(formatted), 'current', 'formatted'):
 			print(d, end='')
 		return False

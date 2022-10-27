@@ -159,7 +159,7 @@ class Network:
     if not raw:
       raise NotImplementedError()
 
-    cinfo = '{} compressed'.format(size) if self.compress else 'not compressed'
+    cinfo = f'{size} compressed' if self.compress else 'not compressed'
     self.log.debug('<- 0x%0.2X, %d bytes, %s\n"%s"', raw[0], len(raw), cinfo, raw)
 
     # Creates and instance of the packet from the buffer
@@ -171,7 +171,7 @@ class Network:
     pkt = pktClass()
     pkt.decode(raw)
     assert pkt.validated
-    assert pkt.length == len(raw), hex(cmd)+" "+str(pkt.length)+" != "+ str(len(raw))
+    assert pkt.length == len(raw), f"{hex(cmd)} {str(pkt.length)} != {len(raw)}"
 
     # Remove the processed packet from the buffer the buffer
     self.buf = self.buf[size:]

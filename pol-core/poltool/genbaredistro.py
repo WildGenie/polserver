@@ -6,8 +6,7 @@ import shutil
 
 url = 'https://github.com/polserver/BareDistro/archive/master.zip'
 r = urllib.request.urlopen(url)
-filedir=os.path.dirname(__file__)
-if filedir:
+if filedir := os.path.dirname(__file__):
     os.chdir(filedir)
 with zipfile.ZipFile(io.BytesIO(r.read())) as zipObj:
       zipObj.extractall()
@@ -32,11 +31,13 @@ void BareDistro::distro_files( std::map<fs::path, std::vector<std::string>>& dis
         for file in files:
             if file.startswith('.'):
                 continue
-            f.write('  distro.emplace( "{}",\n'.format(
-                os.path.join(os.path.relpath(root, archivedir), file)))
+            f.write(
+                f'  distro.emplace( "{os.path.join(os.path.relpath(root, archivedir), file)}",\n'
+            )
+
             f.write('                  std::initializer_list<std::string>( {\n')
             with open(os.path.join(root, file),'r') as df:
-                for line in df.readlines():
+                for line in df:
                     f.write('"{}",\n'.format(line.rstrip().replace('"', r'\"')))
             f.write('                  } ) );\n\n')
 

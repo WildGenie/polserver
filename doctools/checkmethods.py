@@ -8,7 +8,7 @@ def parseMethodDec():
     with open('../pol-core/bscript/objmethods.h','r') as f:
         in_dec=False
         decs=[]
-        for l in f.readlines():
+        for l in f:
             l=l.strip();
             if l=='enum MethodID':
                 in_dec=True
@@ -22,10 +22,10 @@ def parseMethodDec():
     return decs
 
 def parseMethodDef(decs):
-    defs=dict()
+    defs = {}
     with open('../pol-core/bscript/objaccess.cpp','r') as f:
         in_def=False
-        for l in f.readlines():
+        for l in f:
             l=l.strip();
             if l.startswith('ObjMethod object_methods[]'):
                 in_def=True
@@ -52,7 +52,7 @@ def parseFile(file,defs,methods):
         openb=0
         linec=0
         in_c=False
-        for l in f.readlines():
+        for l in f:
             linec+=1
             l=l.strip()
             if l.startswith('//'):
@@ -85,7 +85,7 @@ def parseFile(file,defs,methods):
                     openb+=1
                 if '}' in l:
                     openb-=1
-                    if not openb and in_d:
+                    if not openb:
 
                         if len(supported):
                             if active in methods:
@@ -96,10 +96,7 @@ def parseFile(file,defs,methods):
                         in_d=False
                 if l.startswith('case'):
                     try:
-                        if '::' in l:
-                            m=l.split('::')[1]
-                        else:
-                            m=l
+                        m = l.split('::')[1] if '::' in l else l
                         m=m.split(':')[0].split()[-1]
                         supported.append(defs[m])
                     except Exception as e:
@@ -119,10 +116,10 @@ def parseFile(file,defs,methods):
     return methods
 
 def checkDocs(methods):
-    docs=dict()
+    docs = {}
     with open('../docs/docs.polserver.com/pol100/objref.xml','r') as f:
         in_c=None
-        for l in f.readlines():
+        for l in f:
             l=l.strip()
             if l.startswith('<class'):
                 n=l.split('name="')[1].split('"')[0]
@@ -141,7 +138,7 @@ def checkDocs(methods):
                 
 decs=parseMethodDec()
 defs =parseMethodDef(decs)
-methods=dict()
+methods = {}
 for r,d,files in os.walk('../pol-core/'):
     for f in files:
         if f.endswith('.cpp'):
@@ -157,28 +154,26 @@ for dc,dm in docs.items():
     pm=translate.get(dc,dc)
 
     if pm in methods:
-        print('checking {}'.format(dc))
+        print(f'checking {dc}')
         for m in methods[pm]:
             if m=='!CPROP!':
                 for mcprop in methods['!CPROP!']:
                     if mcprop not in dm:
-                        print('   {} not in {}'.format(m,dc))
+                        print(f'   {m} not in {dc}')
             elif m not in dm:
-                print('   {} not in {}'.format(m,dc))
+                print(f'   {m} not in {dc}')
         for m in dm:
-            if m not in methods[pm]:
-                #print(m,methods[pm])
-                if '!CPROP!' in methods[pm]:
-                    if m in methods['!CPROP!']:
-                        continue
-                print('   {} docentry not found'.format(m))
+            if m not in methods[pm] and (
+                '!CPROP!' not in methods[pm] or m not in methods['!CPROP!']
+            ):
+                print(f'   {m} docentry not found')
     else:
-        print('Class {} docentry not found'.format(pm))
+        print(f'Class {pm} docentry not found')
 
 for pc, pm in methods.items():
     if pc =='!CPROP!':
         continue
     dc=translate.get(pc,pc)
     if dc not in docs:
-        print('Class {} not found with {}'.format(dc,pm))
+        print(f'Class {dc} not found with {pm}')
 

@@ -125,7 +125,7 @@ class Item(UOBject):
     self.y = pkt.y
     self.z = pkt.z
     self.facing = pkt.facing
-    self.color = pkt.color if pkt.color else 0
+    self.color = pkt.color or 0
     self.status = pkt.flag
 
   def upgradeToContainer(self):
@@ -141,8 +141,7 @@ class Item(UOBject):
     serial = hex(self.serial)
     graphic = hex(self.graphic)
     color = hex(self.color)
-    return "{} Item {} graphic {} color {} at {},{},{} facing {}".format(
-        self.amount, serial, graphic, color, self.x, self.y, self.z, self.facing )
+    return f"{self.amount} Item {serial} graphic {graphic} color {color} at {self.x},{self.y},{self.z} facing {self.facing}"
 
 
 class Container(Item):
@@ -342,9 +341,7 @@ class Player(Mobile):
       self.client.doubleClick(bp)
       if not self.client.waitFor(lambda: isinstance(bp, Container) and hasattr(bp,"content"),5):
         return None
-    if not self.client.waitFor(lambda: bp.content is not None, 5):
-      return None
-    return bp
+    return bp if self.client.waitFor(lambda: bp.content is not None, 5) else None
 
 
 class Target:
@@ -415,10 +412,7 @@ class Speech:
     self.type = pkt.type
     self.color = pkt.color
     self.font = pkt.font
-    if self.unicode:
-      self.lang = pkt.lang
-    else:
-      self.lang = None
+    self.lang = pkt.lang if self.unicode else None
     self.name = pkt.name
     self.msg = pkt.msg
 
@@ -450,14 +444,14 @@ class Speech:
 
   def __str__(self):
     if self.type == self.SAY:
-      return "{}: {}".format(self.name, self.msg)
+      return f"{self.name}: {self.msg}"
     elif self.type == self.EMOTE:
-      return "{} {}".format(self.name, self.msg)
+      return f"{self.name} {self.msg}"
     elif self.type == self.WHISPER:
-      return "{} whispers: {}".format(self.name, self.msg)
+      return f"{self.name} whispers: {self.msg}"
     elif self.type == self.YELL:
-      return "{} yells: {}".format(self.name, self.msg)
-    return "[{}] {}: {}".format(self.typeName().upper(), self.name, self.msg)
+      return f"{self.name} yells: {self.msg}"
+    return f"[{self.typeName().upper()}] {self.name}: {self.msg}"
 
   def __repr__(self):
     p = "u" if self.unicode else ""
@@ -504,7 +498,7 @@ class Client(threading.Thread):
     super().__init__()
     # Change the thread name to better identify
     idstr=''if id is None else str(id)
-    self.name = 'Client' +idstr+ self.name
+    self.name = f'Client{idstr}{self.name}'
     self.id = id
 
     ## Send queue
@@ -527,7 +521,7 @@ class Client(threading.Thread):
     ## When to send next ping
     self.ping = 0
     ## Logger, for internal usage
-    self.log = logging.getLogger('client'+idstr)
+    self.log = logging.getLogger(f'client{idstr}')
     ## Features sent with 0xb9 packet
     self.features = None
     ## Flags sent with 0xa9 packet
@@ -670,7 +664,8 @@ class Client(threading.Thread):
   @status('game')
   def start(self, ai):
     if not isinstance(ai, brain.Brain):
-      raise RuntimeError("Unknown brain, expecting a Brain instance, got {}".format(type(ai)))
+      raise RuntimeError(
+          f"Unknown brain, expecting a Brain instance, got {type(ai)}")
     self.brain = ai
     super().start()
 
@@ -805,7 +800,7 @@ class Client(threading.Thread):
       assert self.lc
       self.log.info("Received tip: %s", pkt.msg.replace('\r','\n'))
 
-    elif isinstance(pkt, packets.SendSpeechPacket) or isinstance(pkt, packets.UnicodeSpeechPacket):
+    elif isinstance(pkt, (packets.SendSpeechPacket, packets.UnicodeSpeechPacket)):
       speech = Speech(self, pkt)
       if self.lc:
         self.log.info(repr(speech))
@@ -840,7 +835,7 @@ class Client(threading.Thread):
       # Start the brain
       self.brain.started.set()
 
-    elif isinstance(pkt, packets.MoveAckPacket) or isinstance(pkt, packets.MoveRejectPacket):
+    elif isinstance(pkt, (packets.MoveAckPacket, packets.MoveRejectPacket)):
       self.handleMovePacket(pkt)
 
     elif isinstance(pkt, packets.Unk32Packet):
@@ -875,7 +870,7 @@ class Client(threading.Thread):
       self.handleSmoothBoatPacket(pkt)
 
     else:
-      self.log.warn("Unhandled packet {}".format(pkt.__class__))
+      self.log.warn(f"Unhandled packet {pkt.__class__}")
 
   @status('game')
   @clientthread
@@ -991,11 +986,7 @@ class Client(threading.Thread):
   @clientthread
   @logincomplete
   def handleMovePacket(self, pkt):
-    if isinstance(pkt, packets.MoveAckPacket):
-      ack = True
-    else:
-      ack = False
-
+    ack = isinstance(pkt, packets.MoveAckPacket)
     with self.moveLock:
       # Match first move packet to be ackowledged
       mpkt = self.unmoves.popleft()
@@ -1237,7 +1228,7 @@ class Client(threading.Thread):
       if len(expect) == 1:
         err += "0x%0.2X packet" % expect.cmd
       else:
-        err += "one of %s packets" % '/'.join(["0x%0.2X"%x.cmd for x in expect])
+        err += f"""one of {'/'.join(["0x%0.2X" % x.cmd for x in expect])} packets"""
       err += ", got 0x%0.2X intead" % pkt.cmd
       raise UnexpectedPacketError(err)
 
